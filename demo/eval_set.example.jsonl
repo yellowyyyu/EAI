@@ -1,0 +1,6 @@
+{"query": "项目 当前状态", "expect_any": ["状态"], "note": "示例：按你自己的记忆改写"}
+{"query": "约定 接口", "expect_any": ["接口"], "note": "示例：查某次约定"}
+{"query": "部署 脚本", "expect_any": ["部署", "脚本"], "note": "示例：查工程习惯"}
+{"query": "偏好 汇报", "expect_any": ["汇报"], "note": "示例：查沟通偏好"}
+{"query": "错误 处理", "expect_any": ["错误"], "note": "示例"}
+{"query": "不存在的词xyzabc", "allow_empty": true, "note": "示例：容错用例（不要求命中，只要求不崩）"}

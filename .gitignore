@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+
+# —— 你的记忆是你的隐私：默认全部不进 git ——
+memory/
+logs/
+brief_snapshot.md
+config.json
