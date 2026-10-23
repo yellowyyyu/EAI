@@ -98,12 +98,11 @@ def _safe_name(name: str) -> str:
 
 
 def _project_from_cwd(cwd: str) -> str:
+    """取项目名：Windows 与 POSIX 路径都兼容（记录里两种都可能出现）。"""
     if not cwd:
         return "unknown"
-    try:
-        base = Path(cwd).name
-    except (OSError, ValueError):
-        base = ""
+    p = str(cwd).strip().replace("\\", "/").rstrip("/")
+    base = p.rsplit("/", 1)[-1] if p else ""
     return _safe_name(base)
 
 
