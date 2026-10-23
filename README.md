@@ -25,7 +25,7 @@
 
 ## 安装（一条命令）
 
-要求：Python 3.10+、git；有 Claude Code 或 Codex 会自动接入。
+要求：Python 3.8+、git；有 Claude Code 或 Codex 会自动接入。
 
 **Windows**（PowerShell）：
 
@@ -41,7 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/yellowyyyu/EAI/main/tools/bootstrap
 
 装到 `~/EAI`（记忆和人格就长在这里）。重复运行等于升级，不会覆盖已有记忆和档案。
 
-安装器会：初始化记忆库 → 生成开场简报 → 创建四本习惯档案并写入全局说明 → 接入 Claude Code（SessionStart 钩子 + MCP）→ 接入 Codex（AGENTS.md + MCP）→ 注册每晚 21:30 自动固结 → 回放历史会话与已有项目记忆（可选）。**每一步可跳过，可重复运行，`--uninstall` 一键撤销（记忆与档案不动）。**
+安装器会：初始化记忆库 → 生成开场简报 → 创建四本习惯档案并写入全局说明 → 安装 `eai` 命令（加入用户 PATH）→ 接入 Claude Code（SessionStart 钩子 + MCP）→ 接入 Codex（AGENTS.md + MCP）→ 注册每晚 21:30 自动固结 → 回放历史会话与已有项目记忆（可选）。**每一步可跳过，可重复运行，`--uninstall` 一键撤销（记忆与档案不动）。**
 
 装完新开一个 Claude Code 或 Codex 会话，直接问它：**"报一下你现在记得我什么。"** 角色、你的习惯、以前发生过的事都会自动带上，不需要你再交代一遍。
 

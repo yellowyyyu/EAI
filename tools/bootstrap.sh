@@ -15,6 +15,6 @@ else
 fi
 
 PY="$(command -v python3 || command -v python || true)"
-[ -n "$PY" ] || { echo "没找到 Python，请先安装 Python 3.10+"; exit 1; }
+[ -n "$PY" ] || { echo "没找到 Python，请先安装 Python 3.8+"; exit 1; }
 
 PYTHONUTF8=1 "$PY" "$DEST/tools/install.py" --yes

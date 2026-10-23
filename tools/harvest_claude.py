@@ -109,7 +109,11 @@ def _project_from_cwd(cwd: str) -> str:
 
 
 def _sha1(text: str) -> str:
-    return hashlib.sha1(text.encode("utf-8"), usedforsecurity=False).hexdigest()
+    data = text.encode("utf-8")
+    try:
+        return hashlib.sha1(data, usedforsecurity=False).hexdigest()
+    except TypeError:  # Python < 3.9 不支持 usedforsecurity
+        return hashlib.sha1(data).hexdigest()
 
 
 # ---------------------------------------------------------------- 解析

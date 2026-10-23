@@ -8,10 +8,11 @@
   1) 初始化本机专属记忆库（EAI 文件夹里长出你自己的全新管家）
   2) 生成开场简报快照
   3) 初始化四本习惯档案 + 写入全局说明（Claude Code 的 CLAUDE.md）
-  4) 接入 Claude Code（SessionStart 钩子 + MCP 工具）
-  5) 接入 Codex（AGENTS.md + MCP 工具）
-  6) 注册每晚 21:30 自动固结（可选）
-  7) 回放历史会话 + 导入已有项目记忆（可选）
+  4) 安装 eai 命令（放进用户 PATH，任意终端直接敲 eai）
+  5) 接入 Claude Code（SessionStart 钩子 + MCP 工具）
+  6) 接入 Codex（AGENTS.md + MCP 工具）
+  7) 注册每晚 21:30 自动固结（可选）
+  8) 回放历史会话 + 导入已有项目记忆（可选）
 
 用法：
   python tools/install.py            # 交互式
@@ -207,13 +208,13 @@ def agents_block() -> str:
 # ---------------- 各步骤 ----------------
 
 def step_init():
-    print("\n[1/7] 初始化记忆库 …")
+    print("\n[1/8] 初始化记忆库 …")
     r = run_eai(["init"], capture_output=True, encoding="utf-8", errors="replace")
     print("   ", (r.stdout or r.stderr or "").strip().splitlines()[-1] if (r.stdout or r.stderr) else "完成")
 
 
 def step_snapshot():
-    print("[2/7] 生成开场简报快照 …")
+    print("[2/8] 生成开场简报快照 …")
     LOG_DIR.mkdir(exist_ok=True)
     r = run_eai(["brief"], capture_output=True, encoding="utf-8", errors="replace")
     snap = ROOT / "brief_snapshot.md"
@@ -222,7 +223,7 @@ def step_snapshot():
 
 
 def step_profile():
-    print("[3/7] 初始化习惯档案 + 写入全局说明 …")
+    print("[3/8] 初始化习惯档案 + 写入全局说明 …")
     src = TEMPLATES / "user-profile"
     PROFILE_DIR.mkdir(parents=True, exist_ok=True)
     copied, kept = [], []
@@ -239,6 +240,104 @@ def step_profile():
         print(f"    已存在，保留不动：{'、'.join(kept)}")
     action = upsert_block(CLAUDE_DIR / "CLAUDE.md", claude_block())
     print(f"    CLAUDE.md 角色与档案区块{action}（{_posix(CLAUDE_DIR / 'CLAUDE.md')}）")
+
+
+# ---------------- eai 命令入口 ----------------
+
+def _cli_dir() -> Path:
+    if IS_WIN:
+        base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+        return Path(base) / "Programs" / "EAI"
+    return Path.home() / ".local" / "bin"
+
+
+def _set_user_path(add=None, remove=None) -> bool:
+    """增删 Windows 用户 PATH 里的一项；返回是否真的改动了。"""
+    import winreg
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0,
+                             winreg.KEY_READ | winreg.KEY_WRITE)
+    except OSError:
+        return False
+    try:
+        try:
+            val, typ = winreg.QueryValueEx(key, "Path")
+        except FileNotFoundError:
+            val, typ = "", winreg.REG_EXPAND_SZ
+        entries = [e for e in str(val).split(";") if e.strip()]
+
+        def norm(s):
+            return s.strip().rstrip("\\/").lower()
+
+        if add:
+            if any(norm(e) == norm(add) for e in entries):
+                return False
+            entries.append(add)
+        elif remove:
+            kept = [e for e in entries if norm(e) != norm(remove)]
+            if len(kept) == len(entries):
+                return False
+            entries = kept
+        winreg.SetValueEx(key, "Path", 0, typ, ";".join(entries))
+        return True
+    finally:
+        key.Close()
+
+
+def _broadcast_env_change():
+    if not IS_WIN:
+        return
+    try:
+        import ctypes
+        ctypes.windll.user32.SendMessageTimeoutW(
+            0xFFFF, 0x001A, 0, "Environment", 0, 1000, None)
+    except Exception:
+        pass
+
+
+def _write_cli_shim() -> Path:
+    d = _cli_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    src = str(ROOT / "src") if IS_WIN else _posix(ROOT / "src")
+    if IS_WIN:
+        p = d / "eai.cmd"
+        p.write_text(
+            "@echo off\r\n"
+            "chcp 65001 >nul\r\n"
+            "setlocal\r\n"
+            'set "PYTHONUTF8=1"\r\n'
+            f'set "PYTHONPATH={src};%PYTHONPATH%"\r\n'
+            f'"{sys.executable}" -m eai %*\r\n',
+            encoding="ascii", errors="replace")
+    else:
+        p = d / "eai"
+        p.write_text(
+            "#!/usr/bin/env bash\n"
+            "export PYTHONUTF8=1\n"
+            f'export PYTHONPATH="{src}${{PYTHONPATH:+:$PYTHONPATH}}"\n'
+            f'exec "{sys.executable}" -m eai "$@"\n',
+            encoding="utf-8")
+        p.chmod(0o755)
+    return p
+
+
+def step_cli():
+    print("[4/8] 安装 eai 命令（任意终端直接敲 eai）…")
+    try:
+        p = _write_cli_shim()
+    except Exception as ex:
+        print(f"    安装失败：{ex}（也可直接用 python {_posix(RUN_EAI)} 调用）")
+        return
+    if IS_WIN:
+        added = _set_user_path(add=str(p.parent))
+        _broadcast_env_change()
+        tail = "（已加入用户 PATH，新开终端生效）" if added else "（PATH 已包含）"
+        print(f"    已安装：{p}{tail}")
+    else:
+        print(f"    已安装：{p}")
+        if str(p.parent) not in os.environ.get("PATH", "").split(os.pathsep):
+            print(f"    注意：{p.parent} 不在 PATH，请把这行加进 shell 配置：")
+            print(f'      export PATH="{p.parent}:$PATH"')
 
 
 def _hook_entry():
@@ -267,7 +366,7 @@ def _is_our_hook(entry):
 
 
 def step_claude_code():
-    print("[4/7] 接入 Claude Code（开场自动带记忆 + MCP 工具）…")
+    print("[5/8] 接入 Claude Code（开场自动带记忆 + MCP 工具）…")
     ok = True
     sfile = CLAUDE_DIR / "settings.json"
     CLAUDE_DIR.mkdir(parents=True, exist_ok=True)
@@ -313,7 +412,7 @@ def _codex_mcp_toml() -> str:
 
 
 def step_codex():
-    print("[5/7] 接入 Codex（开场自动读档案 + MCP 工具）…")
+    print("[6/8] 接入 Codex（开场自动读档案 + MCP 工具）…")
     CODEX_DIR.mkdir(parents=True, exist_ok=True)
     action = upsert_block(CODEX_DIR / "AGENTS.md", agents_block())
     print(f"    AGENTS.md 角色与档案区块{action}（{_posix(CODEX_DIR / 'AGENTS.md')}）")
@@ -332,7 +431,7 @@ def step_codex():
 
 
 def step_daily_task():
-    print("[6/7] 注册每晚 21:30 自动固结 …")
+    print("[7/8] 注册每晚 21:30 自动固结 …")
     if SKIP_TASK:
         print("    已按测试模式跳过计划任务")
     elif IS_WIN:
@@ -348,7 +447,7 @@ def step_daily_task():
 
 
 def step_replay():
-    print("[7/7] 回放历史会话 + 导入已有项目记忆 …")
+    print("[8/8] 回放历史会话 + 导入已有项目记忆 …")
     for tool in ("harvest_claude.py", "harvest_codex.py"):
         r = subprocess.run([sys.executable, str(ROOT / "tools" / tool)],
                            capture_output=True, encoding="utf-8", errors="replace")
@@ -448,10 +547,23 @@ def uninstall():
     if IS_WIN:
         subprocess.run(["schtasks", "/Delete", "/TN", TASK_NAME, "/F"], capture_output=True)
         print("  已删除计划任务（若存在）")
+    try:
+        d = _cli_dir()
+        shim = d / ("eai.cmd" if IS_WIN else "eai")
+        if shim.exists():
+            shim.unlink()
+            print("  已删除 eai 命令")
+        if IS_WIN and _set_user_path(remove=str(d)):
+            _broadcast_env_change()
+            print("  已从用户 PATH 移除 EAI 目录")
+    except Exception as ex:
+        print(f"  eai 命令清理失败（可手动删除）：{ex}")
     print("  记忆本体（memory/）、档案（~/.claude/user-profile/）原样保留；不再需要时手动删文件夹即可。")
 
 
 def main():
+    if sys.version_info < (3, 8):
+        sys.exit(f"EAI 需要 Python 3.8 或更高版本，当前为 {sys.version.split()[0]}。请升级后重试。")
     ap = argparse.ArgumentParser()
     ap.add_argument("--yes", action="store_true", help="全部按默认执行，不询问")
     ap.add_argument("--uninstall", action="store_true")
@@ -469,29 +581,31 @@ def main():
     step_init()
     step_snapshot()
     step_profile()
+    step_cli()
 
     if ask("接入 Claude Code？（开场自动带记忆 + MCP 工具）", True, a.yes):
         step_claude_code()
     else:
-        print("[4/7] 跳过 Claude Code 接入")
+        print("[5/8] 跳过 Claude Code 接入")
 
     if ask("接入 Codex？（开场自动读档案 + MCP 工具）", True, a.yes):
         step_codex()
     else:
-        print("[5/7] 跳过 Codex 接入")
+        print("[6/8] 跳过 Codex 接入")
 
     if ask("注册每晚 21:30 自动固结？", True, a.yes):
         step_daily_task()
     else:
-        print("[6/7] 跳过计划任务")
+        print("[7/8] 跳过计划任务")
 
     if ask("现在回放历史会话 + 导入已有项目记忆？（可跳过，以后跑 `eai day` 也行）", False, a.yes):
         step_replay()
     else:
-        print("[7/7] 跳过历史回放")
+        print("[8/8] 跳过历史回放")
 
     print("\n完成。新开一个 Claude Code 或 Codex 会话，直接问它：\"报一下你现在记得我什么。\"")
-    print("  常用命令：python tools/run_eai.py remember \"…\" / recall \"…\" / day / brief")
+    print("  常用命令：eai remember \"…\" / eai recall \"…\" / eai day / eai brief")
+    print("  找不到 eai 命令时：python tools/run_eai.py remember \"…\"（新开终端后 PATH 才生效）")
     print("  卸载接入：python tools/install.py --uninstall（记忆与档案不删）")
     return 0
 

@@ -20,7 +20,7 @@ $py = Get-Command python -ErrorAction SilentlyContinue
 $pyargs = @()
 if (-not $py) {
     $py = Get-Command py -ErrorAction SilentlyContinue
-    if (-not $py) { throw "没找到 Python，请先安装 Python 3.10+：https://www.python.org/downloads/" }
+    if (-not $py) { throw "没找到 Python，请先安装 Python 3.8+：https://www.python.org/downloads/" }
     $pyargs = @("-3")
 }
 

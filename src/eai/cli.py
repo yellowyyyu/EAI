@@ -218,7 +218,9 @@ def cmd_day(args) -> int:
     home = util.eai_home()
     if (home / ".git").exists():
         try:
-            subprocess.run(["git", "-C", str(home), "add", "-A"], capture_output=True, timeout=120)
+            # 只留痕记忆本身；绝不把用户未提交的代码/文件卷进自动提交
+            subprocess.run(["git", "-C", str(home), "add", "-A", "--", "memory"],
+                           capture_output=True, timeout=120)
             chk = subprocess.run(["git", "-C", str(home), "diff", "--cached", "--quiet"], timeout=60)
             if chk.returncode != 0:
                 msg = (f"day: +{stats['new']}新 {stats['merged']}合并 {stats['superseded']}覆盖 "
