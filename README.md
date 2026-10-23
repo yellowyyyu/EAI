@@ -19,23 +19,33 @@
 - **中文检索**：二元分词 + 覆盖率打分（相关 × 重要 × 新近），用则强化，且防"头部滚雪球"
 - **零第三方依赖**：纯 Python 标准库，Windows / macOS / Linux 直接跑
 - **本地优先**：数据不出本机；智能固结用本机 Ollama（可选），没有也不残废（自动降级纯规则）
-- **接入任意 AI**：Claude Code 钩子 + CLAUDE.md 导入 + MCP 工具（recall / remember / memory_stats）；其它 MCP 客户端同样可接
+- **习惯档案**：四本档案（说话习惯、词语小词典、图片偏好、任务做法）每次会话自动加载、平时自动维护；长期习惯进档案，事件与决定进记忆，两者互补
+- **接入任意 AI**：Claude Code 钩子 + CLAUDE.md 导入 + MCP 工具（recall / remember / memory_stats）；Codex 走 AGENTS.md + MCP；其它 MCP 客户端同样可接
 - **永不物理删除**：新旧覆盖链式更新，一切可考古；`memory/` 默认不进 git（那是你的隐私）
 
-## 安装（5 分钟）
+## 安装（一条命令）
 
-要求：Python 3.10+，有 Claude Code 更佳（自动接入）。
+要求：Python 3.10+、git；有 Claude Code 或 Codex 会自动接入。
 
-```bash
-git clone https://github.com/yellowyyyu/EAI.git && cd EAI
+**Windows**（PowerShell）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/yellowyyyu/EAI/main/tools/bootstrap.ps1 | iex"
 ```
 
-- **Windows**：双击 `tools\install.bat`
-- **macOS / Linux**：`bash tools/install.sh`
+**macOS / Linux**：
 
-安装器会：初始化你本机专属的记忆库 → 生成简报快照 → （可选）接入 Claude Code → （可选）注册每晚 21:30 自动固结 → （可选）把本机历史会话回放成记忆。**每一步可跳过，可重复运行，`--uninstall` 一键撤销（记忆不动）。**
+```bash
+curl -fsSL https://raw.githubusercontent.com/yellowyyyu/EAI/main/tools/bootstrap.sh | bash
+```
 
-装完后新开一个 Claude 会话，直接问它：**"报一下你现在记得我什么。"**
+装到 `~/EAI`（记忆和人格就长在这里）。重复运行等于升级，不会覆盖已有记忆和档案。
+
+安装器会：初始化记忆库 → 生成开场简报 → 创建四本习惯档案并写入全局说明 → 接入 Claude Code（SessionStart 钩子 + MCP）→ 接入 Codex（AGENTS.md + MCP）→ 注册每晚 21:30 自动固结 → 回放历史会话与已有项目记忆（可选）。**每一步可跳过，可重复运行，`--uninstall` 一键撤销（记忆与档案不动）。**
+
+装完新开一个 Claude Code 或 Codex 会话，直接问它：**"报一下你现在记得我什么。"** 角色、你的习惯、以前发生过的事都会自动带上，不需要你再交代一遍。
+
+> 国内网络访问 GitHub 需要代理；也可以手动 `git clone https://github.com/yellowyyyu/EAI.git` 后运行 `python tools/install.py`。
 
 ## 快速上手
 
@@ -64,7 +74,8 @@ eai growth --since 7d                                # 成长报告：“这周�
 
 ## 接进每次会话
 
-- **Claude Code**：安装器自动完成三件套——SessionStart 钩子（实时简报）、CLAUDE.md 快照导入（兜底）、MCP 工具（`recall` / `remember` / `memory_stats`）。
+- **Claude Code**：安装器自动完成三件套——SessionStart 钩子（实时简报）、CLAUDE.md 里的角色 + 四本档案 @引用（每次会话自动加载）、MCP 工具（`recall` / `remember` / `memory_stats`）。
+- **Codex**：`~/.codex/AGENTS.md` 写入角色与档案规则（每次会话自动加载，开场自己读简报和四本档案）+ `config.toml` 注册 MCP 工具。
 - **Windows 大坑（本项目已内置规避，值得记下）**：Claude Code 执行 SessionStart 钩子走 **PowerShell**，命令写 bash 语法（`||`、`2>/dev/null`）会被**静默拒绝**——必须用 `"shell": "powershell"` + `hook_boot.bat` 包装（见 `tools/install.py`）。
 - **其它 MCP 客户端**：命令配成
   `python <仓库路径>/src/eai/mcp_server.py`
@@ -79,6 +90,7 @@ eai growth --since 7d                                # 成长报告：“这周�
 
 ```
 ├─ src/eai/            管家本体（零第三方依赖）
+├─ templates/          四本习惯档案模板 + 全局说明模板
 ├─ tools/              采集器、开场钩子、安装器、批处理入口
 ├─ tests/              核心/采集/MCP 测试（纯标准库 unittest）
 ├─ figures/            架构图脚本（生成你自己的增长曲线也在这里）
