@@ -208,14 +208,14 @@ def agents_block() -> str:
 
 def step_init():
     print("\n[1/7] 初始化记忆库 …")
-    r = run_eai(["init"], capture_output=True, text=True, errors="replace")
+    r = run_eai(["init"], capture_output=True, encoding="utf-8", errors="replace")
     print("   ", (r.stdout or r.stderr or "").strip().splitlines()[-1] if (r.stdout or r.stderr) else "完成")
 
 
 def step_snapshot():
     print("[2/7] 生成开场简报快照 …")
     LOG_DIR.mkdir(exist_ok=True)
-    r = run_eai(["brief"], capture_output=True, text=True, errors="replace")
+    r = run_eai(["brief"], capture_output=True, encoding="utf-8", errors="replace")
     snap = ROOT / "brief_snapshot.md"
     snap.write_text((r.stdout or "").strip() + "\n", encoding="utf-8")
     print(f"    已写入 {snap.name}（{len(r.stdout or '')} 字符）")
@@ -296,7 +296,7 @@ def step_claude_code():
         if IS_WIN:
             cmd = ["cmd", "/c"] + cmd
         try:
-            r = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
+            r = subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace")
             out = (r.stdout or "") + (r.stderr or "")
             print("    MCP：" + (out.strip().splitlines()[-1] if out.strip() else "完成"))
         except Exception as ex:
@@ -339,7 +339,7 @@ def step_daily_task():
         r = subprocess.run(["schtasks", "/Create", "/TN", TASK_NAME,
                             "/TR", f'"{ROOT / "tools" / "day.bat"}"',
                             "/SC", "DAILY", "/ST", "21:30", "/F"],
-                           capture_output=True, text=True, errors="replace")
+                           capture_output=True, encoding="utf-8", errors="replace")
         ok = r.returncode == 0
         print("    " + ("已注册计划任务 " + TASK_NAME if ok else "注册失败（可手动跑 tools\\register_daily_task.bat）"))
     else:
@@ -351,7 +351,7 @@ def step_replay():
     print("[7/7] 回放历史会话 + 导入已有项目记忆 …")
     for tool in ("harvest_claude.py", "harvest_codex.py"):
         r = subprocess.run([sys.executable, str(ROOT / "tools" / tool)],
-                           capture_output=True, text=True, errors="replace")
+                           capture_output=True, encoding="utf-8", errors="replace")
         lines = [l for l in ((r.stdout or "") + (r.stderr or "")).splitlines() if l.strip()]
         print("    " + (lines[-1] if lines else tool + " 无输出"))
     imported = _import_project_memories()
@@ -400,7 +400,7 @@ def _import_project_memories() -> int:
         return 0
     r = subprocess.run([sys.executable, "-c", code], cwd=str(ROOT), env=env,
                        input=json.dumps(records, ensure_ascii=False),
-                       capture_output=True, text=True, errors="replace")
+                       capture_output=True, encoding="utf-8", errors="replace")
     try:
         return int((r.stdout or "0").strip().splitlines()[-1])
     except Exception:
@@ -432,7 +432,7 @@ def uninstall():
         cmd = ["claude", "mcp", "remove", "-s", "user", "eai-memory"]
         if IS_WIN:
             cmd = ["cmd", "/c"] + cmd
-        subprocess.run(cmd, capture_output=True, text=True)
+        subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace")
         print("  已移除 Claude Code 的 MCP（若存在）")
     cfg = CODEX_DIR / "config.toml"
     if cfg.exists():
