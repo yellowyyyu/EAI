@@ -205,6 +205,19 @@ def agents_block() -> str:
 {BLOCK_END}"""
 
 
+def _has_eai_wiring(text: str) -> bool:
+    """判断 CLAUDE.md 里是否已经手工写好了管家配置（四本档案引用 + 记忆用法）。
+    已有就不再追加自动区块，避免同一套角色/规则出现两份。"""
+    if not text:
+        return False
+    refs = ("speech-style.md", "personal-glossary.md",
+            "image-preferences.md", "task-habits.md")
+    has_refs = all(r in text for r in refs)
+    has_memory = ("recall" in text and
+                  ("brief_snapshot" in text or "eai.bat" in text or "run_eai" in text))
+    return has_refs and has_memory
+
+
 # ---------------- 各步骤 ----------------
 
 def step_init():
@@ -238,8 +251,13 @@ def step_profile():
         print(f"    已创建档案：{'、'.join(copied)}")
     if kept:
         print(f"    已存在，保留不动：{'、'.join(kept)}")
-    action = upsert_block(CLAUDE_DIR / "CLAUDE.md", claude_block())
-    print(f"    CLAUDE.md 角色与档案区块{action}（{_posix(CLAUDE_DIR / 'CLAUDE.md')}）")
+    target = CLAUDE_DIR / "CLAUDE.md"
+    old = target.read_text(encoding="utf-8") if target.exists() else ""
+    if "<!-- EAI:BEGIN" not in old and _has_eai_wiring(old):
+        print("    CLAUDE.md 已有管家配置（手工版），跳过重复写入")
+    else:
+        action = upsert_block(target, claude_block())
+        print(f"    CLAUDE.md 角色与档案区块{action}（{_posix(target)}）")
 
 
 # ---------------- eai 命令入口 ----------------

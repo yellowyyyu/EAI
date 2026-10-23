@@ -1,5 +1,8 @@
 # EAI · 私人管家（AI 长期记忆系统）
 
+[![tests](https://github.com/yellowyyyu/EAI/actions/workflows/tests.yml/badge.svg)](https://github.com/yellowyyyu/EAI/actions/workflows/tests.yml)
+[![release](https://img.shields.io/github/v/release/yellowyyyu/EAI)](https://github.com/yellowyyyu/EAI/releases)
+
 > **模型是引擎，记忆和人格是灵魂。** 换任何 AI，接上同一套记忆，就是同一个管家。
 > *Model is the engine; memory and persona are the soul.*
 
@@ -106,6 +109,12 @@ eai growth --since 7d                                # 成长报告：“这周�
 3. **想在两台电脑用同一个管家？** 见 [`docs/双机同步.md`](docs/双机同步.md)——记住一条：同一时间只让一台电脑跑固结。
 4. **记错了怎么办？** `eai remember "更正：……" -k correction`；下次固结自动以新为准，旧条归档备查。
 5. **想彻底停用？** `python tools/install.py --uninstall` 撤销全部接入；删掉文件夹即全部消失。
+
+## 开发与反馈
+
+- 变更记录：[CHANGELOG.md](CHANGELOG.md)
+- 参与贡献：[CONTRIBUTING.md](CONTRIBUTING.md)
+- 问题反馈：[Issues](https://github.com/yellowyyyu/EAI/issues)
 
 ## License
 
